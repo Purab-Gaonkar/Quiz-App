@@ -19,23 +19,38 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+if (!process.env.JWT_SECRET) {
+    process.env.JWT_SECRET = 'your-secret-key-here';
+  }
+
 const authenticateJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (authHeader) {
     const token = authHeader.split(' ')[1];
 
-    jwt.verify(token, 'your_jwt_secret', (err, user) => {
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
       if (err) {
+        console.error('JWT verification error:', err);
         return res.sendStatus(403);
       }
 
+      console.log('Authenticated user:', user);
       req.user = user;
       next();
     });
   } else {
+    console.log('No authorization header');
     res.sendStatus(401);
   }
+};
+
+// Add this middleware function
+const isAdmin = (req, res, next) => {
+  if (!req.user || !req.user.isAdmin) {
+    return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+  }
+  next();
 };
 
 // User registration
@@ -60,35 +75,41 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
+    console.log('Login attempt for username:', username);
     
     const [users] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
     
     if (users.length === 0) {
+      console.log('User not found:', username);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
     const user = users[0];
+    console.log('User found:', user);
+    
     const passwordMatch = await bcrypt.compare(password, user.password);
     
     if (!passwordMatch) {
+      console.log('Password mismatch for user:', username);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     
     const token = jwt.sign(
-      { userId: user.id, isAdmin: user.is_admin === 1 }, // Make sure this correctly reflects the admin status
-      'your_jwt_secret',
+      { id: user.id, isAdmin: user.is_admin },
+      process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
     
-    res.json({ token, userId: user.id, isAdmin: user.is_admin === 1 });
+    console.log('Login successful for user:', username, 'Is Admin:', user.is_admin);
+    res.json({ token, isAdmin: user.is_admin });
   } catch (error) {
-    console.error('Error logging in:', error);
-    res.status(500).json({ message: 'Error logging in' });
+    console.error('Error in login route:', error);
+    res.status(500).json({ message: 'Error logging in', error: error.message });
   }
 });
 
 // Quiz routes
-app.post('/api/quizzes', authenticateJWT, async (req, res) => {
+app.post('/api/quizzes', authenticateJWT, isAdmin, async (req, res) => {
   try {
     const { title, questions, time_limit } = req.body;
     const connection = await pool.getConnection();
@@ -161,7 +182,9 @@ app.post('/api/quizzes/:id/submit', authenticateJWT, async (req, res) => {
   try {
     const { answers } = req.body;
     const quizId = req.params.id;
-    const userId = req.user.userId;
+    const userId = req.user.id; // Make sure this is correct
+
+    console.log('Quiz submission attempt:', { quizId, userId, answers });
 
     const connection = await pool.getConnection();
     await connection.beginTransaction();
@@ -175,12 +198,16 @@ app.post('/api/quizzes/:id/submit', authenticateJWT, async (req, res) => {
         [answer.questionId]
       );
 
+      if (correctOption.length === 0) {
+        throw new Error(`No correct option found for question ${answer.questionId}`);
+      }
+
       const isCorrect = correctOption[0].id === answer.selectedOptionId;
       if (isCorrect) score++;
 
       await connection.query(
-        'INSERT INTO user_answers (user_id, quiz_id, question_id, selected_option_id, is_correct) VALUES (?, ?, ?, ?, ?)',
-        [userId, quizId, answer.questionId, answer.selectedOptionId, isCorrect]
+        'INSERT INTO user_answers (user_id, quiz_id, question_id, selected_option_id) VALUES (?, ?, ?, ?)',
+        [userId, quizId, answer.questionId, answer.selectedOptionId]
       );
     }
 
@@ -194,10 +221,11 @@ app.post('/api/quizzes/:id/submit', authenticateJWT, async (req, res) => {
     await connection.commit();
     connection.release();
 
+    console.log('Quiz submitted successfully:', { quizId, userId, score: scorePercentage });
     res.status(201).json({ message: 'Quiz submitted successfully', score: scorePercentage });
   } catch (error) {
     console.error('Error submitting quiz:', error);
-    res.status(500).json({ message: 'Error submitting quiz' });
+    res.status(500).json({ message: 'Error submitting quiz', error: error.message });
   }
 });
 
@@ -222,7 +250,7 @@ app.get('/api/quizzes/:id/results', authenticateJWT, async (req, res) => {
   }
 });
 
-app.delete('/api/quizzes/:id', authenticateJWT, async (req, res) => {
+app.delete('/api/quizzes/:id', authenticateJWT, isAdmin, async (req, res) => {
   try {
     const connection = await pool.getConnection();
     await connection.beginTransaction();
@@ -241,6 +269,63 @@ app.delete('/api/quizzes/:id', authenticateJWT, async (req, res) => {
     res.status(500).json({ message: 'Error deleting quiz' });
   }
 });
+
+app.post('/api/logout', (req, res) => {
+  // In a real application, you might want to invalidate the token
+  res.json({ message: 'Logged out successfully' });
+});
+
+// Achievements route
+app.get('/api/user/achievements', authenticateJWT, async (req, res) => {
+  try {
+    const [achievements] = await pool.query(
+      'SELECT * FROM achievements WHERE user_id = ?',
+      [req.user.id]
+    );
+    res.json(achievements);
+  } catch (error) {
+    console.error('Error fetching achievements:', error);
+    res.status(500).json({ message: 'Error fetching achievements' });
+  }
+});
+
+// User profile routes
+app.get('/api/user/profile', authenticateJWT, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const [rows] = await pool.query('SELECT id, username, email, bio, created_at FROM users WHERE id = ?', [userId]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Handle null values
+    const user = rows[0];
+    user.email = user.email || '';
+    user.bio = user.bio || '';
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+app.put('/api/user/profile', authenticateJWT, async (req, res) => {
+  const { username, email, bio } = req.body;
+  try {
+    await pool.query(
+      'UPDATE users SET username = ?, email = ?, bio = ? WHERE id = ?',
+      [username, email, bio, req.user.id]
+    );
+    res.json({ message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    res.status(500).json({ message: 'Error updating user profile' });
+  }
+});
+
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -7,6 +7,8 @@ import Register from './components/Auth/Register';
 import Home from './components/Home';
 import Navbar from './components/shared/Navbar';
 import PrivateRoute from './components/Auth/PrivateRoute';
+import UserDashboard from './components/User/UserDashboard';
+import TakeQuiz from './components/User/TakeQuiz';
 
 function App() {
   return (
@@ -24,14 +26,8 @@ function App() {
             </PrivateRoute>
           } 
         />
-        <Route 
-          path="/user/*" 
-          element={
-            <PrivateRoute>
-              <UserPortal />
-            </PrivateRoute>
-          } 
-        />
+        <Route path="/user/*" element={<UserDashboard />} />
+        <Route path="/user/take-quiz/:id" element={<TakeQuiz />} />
       </Routes>
     </Router>
   );
