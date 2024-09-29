@@ -27,6 +27,18 @@ function AdminDashboard() {
     }
   };
 
+  const deleteQuiz = async (quizId) => {
+    try {
+      await axios.delete(`/api/quizzes/${quizId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      fetchQuizzes(); // Refresh the quiz list after deletion
+    } catch (error) {
+      console.error('Error deleting quiz:', error);
+      setError('Failed to delete quiz. Please try again later.');
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 

@@ -11,7 +11,7 @@ function QuizList({ quizzes, isAdmin, onDelete }) {
         });
         onDelete();
       } catch (error) {
-        console.error('Error deleting quiz:', error);
+        console.error('Detailed error deleting quiz:', error.response?.data || error);
         alert('Failed to delete quiz. Please try again.');
       }
     }

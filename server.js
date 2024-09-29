@@ -251,22 +251,29 @@ app.get('/api/quizzes/:id/results', authenticateJWT, async (req, res) => {
 });
 
 app.delete('/api/quizzes/:id', authenticateJWT, isAdmin, async (req, res) => {
+  const connection = await pool.getConnection();
   try {
-    const connection = await pool.getConnection();
     await connection.beginTransaction();
 
-    await connection.query('DELETE FROM user_answers WHERE quiz_id = ?', [req.params.id]);
-    await connection.query('DELETE FROM options WHERE question_id IN (SELECT id FROM questions WHERE quiz_id = ?)', [req.params.id]);
-    await connection.query('DELETE FROM questions WHERE quiz_id = ?', [req.params.id]);
-    await connection.query('DELETE FROM quizzes WHERE id = ?', [req.params.id]);
+    const { id } = req.params;
+
+    // Delete related records in order
+    await connection.query('DELETE FROM user_answers WHERE quiz_id = ?', [id]);
+    await connection.query('DELETE FROM quiz_results WHERE quiz_id = ?', [id]);
+    await connection.query('DELETE FROM options WHERE question_id IN (SELECT id FROM questions WHERE quiz_id = ?)', [id]);
+    await connection.query('DELETE FROM questions WHERE quiz_id = ?', [id]);
+    
+    // Finally, delete the quiz
+    await connection.query('DELETE FROM quizzes WHERE id = ?', [id]);
 
     await connection.commit();
-    connection.release();
-
     res.json({ message: 'Quiz deleted successfully' });
   } catch (error) {
-    console.error('Error deleting quiz:', error);
-    res.status(500).json({ message: 'Error deleting quiz' });
+    await connection.rollback();
+    console.error('Detailed error deleting quiz:', error);
+    res.status(500).json({ message: 'Error deleting quiz', error: error.message, stack: error.stack });
+  } finally {
+    connection.release();
   }
 });
 
@@ -292,32 +299,22 @@ app.get('/api/user/achievements', authenticateJWT, async (req, res) => {
 // User profile routes
 app.get('/api/user/profile', authenticateJWT, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const [rows] = await pool.query('SELECT id, username, email, bio, created_at FROM users WHERE id = ?', [userId]);
-    
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
+    const [rows] = await pool.query('SELECT username, email, bio FROM users WHERE id = ?', [req.user.id]);
+    if (rows.length > 0) {
+      res.json(rows[0]);
+    } else {
+      res.status(404).json({ message: 'User not found' });
     }
-
-    // Handle null values
-    const user = rows[0];
-    user.email = user.email || '';
-    user.bio = user.bio || '';
-
-    res.json(user);
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Error fetching user profile' });
   }
 });
 
 app.put('/api/user/profile', authenticateJWT, async (req, res) => {
-  const { username, email, bio } = req.body;
+  const { email, bio } = req.body;
   try {
-    await pool.query(
-      'UPDATE users SET username = ?, email = ?, bio = ? WHERE id = ?',
-      [username, email, bio, req.user.id]
-    );
+    await pool.query('UPDATE users SET email = ?, bio = ? WHERE id = ?', [email, bio, req.user.id]);
     res.json({ message: 'Profile updated successfully' });
   } catch (error) {
     console.error('Error updating user profile:', error);
@@ -325,7 +322,96 @@ app.put('/api/user/profile', authenticateJWT, async (req, res) => {
   }
 });
 
+app.put('/api/quizzes/:id', authenticateJWT, isAdmin, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
 
+    const { id } = req.params;
+    const { title, time_limit, questions } = req.body;
+    
+    // Update the quiz
+    await connection.query('UPDATE quizzes SET title = ?, time_limit = ? WHERE id = ?', [title, time_limit, id]);
+    
+    // Get existing questions
+    const [existingQuestions] = await connection.query('SELECT id FROM questions WHERE quiz_id = ?', [id]);
+    const existingQuestionIds = existingQuestions.map(q => q.id);
+
+    for (const question of questions) {
+      if (question.id) {
+        // Update existing question
+        await connection.query('UPDATE questions SET question_text = ? WHERE id = ?', [question.question_text, question.id]);
+        
+        // Get existing options
+        const [existingOptions] = await connection.query('SELECT id FROM options WHERE question_id = ?', [question.id]);
+        const existingOptionIds = existingOptions.map(o => o.id);
+
+        for (let i = 0; i < question.options.length; i++) {
+          if (question.options[i].id) {
+            // Update existing option
+            await connection.query('UPDATE options SET option_text = ?, is_correct = ? WHERE id = ?', 
+              [question.options[i].text, i === question.correctAnswer, question.options[i].id]);
+          } else {
+            // Add new option
+            await connection.query('INSERT INTO options (question_id, option_text, is_correct) VALUES (?, ?, ?)', 
+              [question.id, question.options[i].text, i === question.correctAnswer]);
+          }
+        }
+
+        // Remove options that no longer exist
+        const updatedOptionIds = question.options.filter(o => o.id).map(o => o.id);
+        const optionsToRemove = existingOptionIds.filter(id => !updatedOptionIds.includes(id));
+        if (optionsToRemove.length > 0) {
+          await connection.query('UPDATE user_answers SET selected_option_id = NULL WHERE selected_option_id IN (?)', [optionsToRemove]);
+          await connection.query('DELETE FROM options WHERE id IN (?)', [optionsToRemove]);
+        }
+      } else {
+        // Add new question
+        const [questionResult] = await connection.query('INSERT INTO questions (quiz_id, question_text) VALUES (?, ?)', [id, question.question_text]);
+        const newQuestionId = questionResult.insertId;
+
+        for (let i = 0; i < question.options.length; i++) {
+          await connection.query('INSERT INTO options (question_id, option_text, is_correct) VALUES (?, ?, ?)', 
+            [newQuestionId, question.options[i].text, i === question.correctAnswer]);
+        }
+      }
+    }
+
+    // Remove questions that no longer exist
+    const updatedQuestionIds = questions.filter(q => q.id).map(q => q.id);
+    const questionsToRemove = existingQuestionIds.filter(id => !updatedQuestionIds.includes(id));
+    if (questionsToRemove.length > 0) {
+      await connection.query('UPDATE user_answers SET question_id = NULL WHERE question_id IN (?)', [questionsToRemove]);
+      await connection.query('DELETE FROM options WHERE question_id IN (?)', [questionsToRemove]);
+      await connection.query('DELETE FROM questions WHERE id IN (?)', [questionsToRemove]);
+    }
+
+    await connection.commit();
+    res.json({ message: 'Quiz updated successfully' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error updating quiz:', error);
+    res.status(500).json({ message: 'Error updating quiz', error: error.message });
+  } finally {
+    connection.release();
+  }
+});
+
+app.get('/api/user/quiz-scores', authenticateJWT, async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT q.title as quiz_title, qr.score
+      FROM quiz_results qr
+      JOIN quizzes q ON qr.quiz_id = q.id
+      WHERE qr.user_id = ?
+      ORDER BY qr.created_at DESC
+    `, [req.user.id]);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching quiz scores:', error);
+    res.status(500).json({ message: 'Error fetching quiz scores' });
+  }
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

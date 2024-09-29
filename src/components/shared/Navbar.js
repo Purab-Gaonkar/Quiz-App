@@ -6,10 +6,12 @@ function Navbar() {
   const navigate = useNavigate();
   const isLoggedIn = !!localStorage.getItem('token');
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  const username = localStorage.getItem('username'); // Add this line to get the username
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('isAdmin');
+    localStorage.removeItem('username'); // Add this line to remove the username
     navigate('/');
   };
 
@@ -26,7 +28,10 @@ function Navbar() {
       </div>
       <div>
         {isLoggedIn ? (
-          <button onClick={handleLogout}>Logout</button>
+          <>
+            <Link to="/profile" style={{ marginRight: '1rem' }}>Profile ({username})</Link>
+            <button onClick={handleLogout}>Logout</button>
+          </>
         ) : (
           <>
             <Link to="/login" style={{ marginRight: '1rem' }}>Login</Link>

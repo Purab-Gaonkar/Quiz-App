@@ -2,39 +2,112 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 function UserProfile() {
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState({
+    username: '',
+    email: '',
+    bio: '',
+  });
+  const [quizScores, setQuizScores] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchProfile();
+    fetchUserData();
+    fetchQuizScores();
   }, []);
 
-  const fetchProfile = async () => {
+  const fetchUserData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      console.log('Token:', token); // Add this line to check the token
       const response = await axios.get('/api/user/profile', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-      setProfile(response.data);
-      setLoading(false);
+      setUser(response.data);
     } catch (error) {
-      console.error('Error fetching profile:', error.response ? error.response.data : error.message);
-      setError('Failed to fetch profile. Please try again later.');
-      setLoading(false);
+      console.error('Error fetching user data:', error);
+      setError('Failed to fetch user data. Please try again later.');
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!profile) return null;
+  const fetchQuizScores = async () => {
+    try {
+      const response = await axios.get('/api/user/quiz-scores', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setQuizScores(response.data);
+    } catch (error) {
+      console.error('Error fetching quiz scores:', error);
+      setError('Failed to fetch quiz scores. Please try again later.');
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setUser({ ...user, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put('/api/user/profile', user, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setIsEditing(false);
+      alert('Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setError('Failed to update profile. Please try again.');
+    }
+  };
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   return (
     <div>
-      <h2>User Profile</h2>
-      <p>Username: {profile.username}</p>
-      {/* Add more profile information as needed */}
+      <h1>User Profile</h1>
+      {isEditing ? (
+        <form onSubmit={handleSubmit}>
+          <div>
+            <label>Email:</label>
+            <input
+              type="email"
+              name="email"
+              value={user.email || ''}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <label>Bio:</label>
+            <textarea
+              name="bio"
+              value={user.bio || ''}
+              onChange={handleInputChange}
+            />
+          </div>
+          <button type="submit">Save</button>
+          <button type="button" onClick={() => setIsEditing(false)}>Cancel</button>
+        </form>
+      ) : (
+        <div>
+          <p><strong>Username:</strong> {user.username}</p>
+          <p><strong>Email:</strong> {user.email}</p>
+          <p><strong>Bio:</strong> {user.bio}</p>
+          <button onClick={() => setIsEditing(true)}>Edit Profile</button>
+        </div>
+      )}
+
+      <h2>Quiz Scores</h2>
+      {quizScores.length > 0 ? (
+        <ul>
+          {quizScores.map((score, index) => (
+            <li key={index}>
+              {score.quiz_title}: {score.score}%
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No quiz scores available.</p>
+      )}
     </div>
   );
 }
