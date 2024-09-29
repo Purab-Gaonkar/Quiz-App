@@ -10,10 +10,10 @@ app.use(cors());
 app.use(bodyParser.json());
 
 const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: 'password',
-  database: 'quiz_app',
+  host: 'sql12.freemysqlhosting.net	',
+  user: 'sql12734231',
+  password: 'SZMYkExk9A',
+  database: 'sql12734231',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
