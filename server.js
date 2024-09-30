@@ -10,14 +10,23 @@ app.use(cors());
 app.use(bodyParser.json());
 
 const pool = mysql.createPool({
-  host: 'sql12.freemysqlhosting.net	',
-  user: 'sql12734231',
-  password: 'SZMYkExk9A',
-  database: 'sql12734231',
+  host: '127.0.0.1',
+  user: 'root',
+  password: 'password',
+  database: 'quiz_app',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
+
+pool.getConnection()
+  .then(connection => {
+    console.log('Connected to the database successfully!');
+    connection.release(); // Release the connection back to the pool
+  })
+  .catch(err => {
+    console.error('Error connecting to the database:', err);
+  });
 
 if (!process.env.JWT_SECRET) {
     process.env.JWT_SECRET = 'your-secret-key-here';
@@ -276,6 +285,26 @@ app.delete('/api/quizzes/:id', authenticateJWT, isAdmin, async (req, res) => {
     connection.release();
   }
 });
+
+app.get('/user/scores', authenticateJWT, async (req, res) => {
+  const userId = req.user.id; // Get the user ID from the request
+
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    const [scores] = await connection.query(
+      'SELECT quiz_id, score FROM quiz_results WHERE user_id = ?',
+      [userId]
+    );
+    res.status(200).json(scores); // Send the scores back as a response
+  } catch (error) {
+    console.error('Error fetching user scores:', error);
+    res.status(500).json({ message: 'Error fetching user scores' });
+  } finally {
+    if (connection) connection.release(); // Ensure the connection is released
+  }
+});
+
 
 app.post('/api/logout', (req, res) => {
   // In a real application, you might want to invalidate the token

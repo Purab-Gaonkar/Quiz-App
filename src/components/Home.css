@@ -1,42 +1,61 @@
-.home {
-    text-align: center;
-    padding: 4rem 2rem;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    min-height: calc(100vh - 64px);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+/* Home.css */
+
+body {
+    margin: 0; /* Ensure no margin on body */
+    background-color: rgb(0, 0, 0);
     color: white;
-}
-
-.home h1 {
-    font-size: 3.5rem;
-    margin-bottom: 1.5rem;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.home p {
-    font-size: 1.5rem;
-    margin-bottom: 3rem;
-    max-width: 600px;
-}
-
-.home-buttons {
+  }
+  
+  .hero-container {
+    background-image: url('./Hero.jpeg'); /* Path to your hero image */
+    background-size: cover;
+    background-position: center;
+    height: 400px; /* Adjust height as necessary */
     display: flex;
-    gap: 1rem;
-}
-
-.home button {
-    padding: 12px 36px;
-    font-size: 1.2rem;
-    border-radius: 50px;
-    background-color: white;
-    color: var(--primary-color);
-    transition: all 0.3s ease;
-}
-
-.home button:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-}
+    align-items: center;
+    justify-content: center;
+    position: relative; /* For positioning the overlay */
+    margin-top: -60px; /* Adjust this value to remove any gap caused by navbar */
+  }
+  
+  .hero-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    font-family:cursive;
+    transform: translate(-50%, -50%);
+    color: white;
+    text-align: center;
+    padding: 20px;
+    background-color: rgba(0, 0, 0, 0.2); /* Semi-transparent background */
+    border-radius: 8px; /* Rounded corners */
+  }
+  
+  .overlay-text {
+    color: white; /* Ensure the text is white */
+    font-size: 24px; /* Adjust font size as needed */
+  }
+  
+  .hero-content {
+    padding-top: 100px;
+    text-align: center;
+    color:white;
+    background-color: rgb(0, 0, 0);
+    margin-top: 20px; /* Space between hero image and content */
+  }
+  
+  .hero-button {
+    margin: 0.5rem;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    background-color: #3498db; /* Primary color */
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .hero-button:hover {
+    background-color: #2980b9; /* Darker shade on hover */
+  }
+  

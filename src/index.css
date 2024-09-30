@@ -80,3 +80,79 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Global Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+ul {
+  list-style-type: none;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: var(--background-color); /* Ensuring body background */
+}
+
+:root {
+  --primary-color: #3498db;
+  --secondary-color: #2ecc71;
+  --background-color: #ecf0f1;
+  --text-color: #34495e;
+  --accent-color: #e74c3c;
+}
+
+/* Profile Component Styles */
+.profile-container {
+  max-width: 500px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background-color: #f9f9f9; /* Specific background for profile */
+}
+
+.profile-container h1 {
+  text-align: center;
+  color: var(--text-color);
+}
+
+.profile-container .error-message {
+  color: red;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.profile-container input[type="text"] {
+  padding: 10px;
+  margin: 0.5rem 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.profile-container input[type="text"]:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+.profile-container button {
+  padding: 10px;
+  margin-top: 1rem;
+  border: none;
+  border-radius: 4px;
+  background-color: var(--primary-color);
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.profile-container button:hover {
+  background-color: #0056b3; /* Darker shade on hover */
+}

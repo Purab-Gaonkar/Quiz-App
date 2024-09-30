@@ -3,6 +3,7 @@ import { Link, Routes, Route } from 'react-router-dom';
 import axios from 'axios';
 import QuizList from '../shared/QuizList';
 import UserProfile from './UserProfile';
+import '../shared/UserDashboard.css';
 
 function UserDashboard() {
   const [quizzes, setQuizzes] = useState([]);
@@ -35,7 +36,7 @@ function UserDashboard() {
   if (error) return <div>Error: {error}</div>;
 
   return (
-    <div>
+    <div className="user-dashboard">
       <h1>User Dashboard</h1>
       <nav>
         <ul>

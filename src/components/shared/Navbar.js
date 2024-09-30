@@ -16,7 +16,7 @@ function Navbar() {
   };
 
   return (
-    <nav style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', backgroundColor: '#f0f0f0' }}>
+    <nav>
       <div>
         <Link to="/" style={{ marginRight: '1rem' }}>Home</Link>
         {isLoggedIn && (

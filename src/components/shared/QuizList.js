@@ -1,20 +1,36 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
 import axios from 'axios';
+import './QuizList.css';
 
 function QuizList({ quizzes, isAdmin, onDelete }) {
+  const [loading, setLoading] = useState(false);
+
   const handleDelete = async (quizId) => {
     if (window.confirm('Are you sure you want to delete this quiz?')) {
+      setLoading(true);
       try {
         await axios.delete(`/api/quizzes/${quizId}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         });
-        onDelete();
+        alert('Quiz deleted successfully.');
+        onDelete(); // Refresh quiz list
       } catch (error) {
         console.error('Detailed error deleting quiz:', error.response?.data || error);
         alert('Failed to delete quiz. Please try again.');
+      } finally {
+        setLoading(false);
       }
     }
+  };
+
+  const handleEdit = (quizId) => {
+    // Navigate to edit quiz page
+    window.location.href = `/admin/edit-quiz/${quizId}`;
+  };
+
+  const handleViewResults = (quizId) => {
+    // Navigate to quiz results page
+    window.location.href = `/admin/quiz-results/${quizId}`;
   };
 
   return (
@@ -26,12 +42,33 @@ function QuizList({ quizzes, isAdmin, onDelete }) {
           <div className="quiz-item-actions">
             {isAdmin ? (
               <>
-                <Link to={`/admin/edit-quiz/${quiz.id}`}>Edit</Link>
-                <button onClick={() => handleDelete(quiz.id)}>Delete</button>
-                <Link to={`/admin/quiz-results/${quiz.id}`}>View Results</Link>
+                <button 
+                  onClick={() => handleEdit(quiz.id)} 
+                  className="action-button"
+                >
+                  Edit
+                </button>
+                <button 
+                  onClick={() => handleDelete(quiz.id)} 
+                  disabled={loading} 
+                  className="action-button"
+                >
+                  {loading ? 'Deleting...' : 'Delete'}
+                </button>
+                <button 
+                  onClick={() => handleViewResults(quiz.id)} 
+                  className="action-button"
+                >
+                  View Results
+                </button>
               </>
             ) : (
-              <Link to={`/user/take-quiz/${quiz.id}`}>Take Quiz</Link>
+              <button 
+                onClick={() => window.location.href = `/user/take-quiz/${quiz.id}`} 
+                className="action-button"
+              >
+                Take Quiz
+              </button>
             )}
           </div>
         </li>

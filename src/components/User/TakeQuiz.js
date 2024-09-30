@@ -15,6 +15,7 @@ function TakeQuiz() {
   const [error, setError] = useState(null);
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [score, setScore] = useState(null);
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
 
   useEffect(() => {
@@ -47,24 +48,41 @@ function TakeQuiz() {
 
   const handleSubmit = async () => {
     try {
-      const answers = userAnswers.map((answer, index) => ({
-        questionId: quiz.questions[index].id,
-        selectedOptionId: answer
-      }));
-
+      setLoadingSubmit(true);
+      
+      // Map user answers to question and corresponding option IDs
+      const answers = userAnswers.map((answer, index) => {
+        // Only include answers where a selection has been made
+        if (answer !== null) {
+          return {
+            questionId: quiz.questions[index].id,
+            selectedOptionId: quiz.questions[index].options[answer].id // Use the ID of the selected option
+          };
+        }
+        return null; // Return null for unanswered questions
+      }).filter(answer => answer !== null); // Filter out nulls
+  
+      if (answers.length === 0) {
+        throw new Error("No valid answers selected.");
+      }
+  
       console.log('Submitting answers:', answers);
-
+  
       const response = await axios.post(`/api/quizzes/${quizId}/submit`, { answers }, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
-
+  
       setScore(response.data.score);
       setQuizSubmitted(true);
     } catch (error) {
       console.error('Error submitting quiz:', error.response ? error.response.data : error.message);
       setError('Failed to submit quiz. Please try again.');
+    } finally {
+      setLoadingSubmit(false);
     }
   };
+  
+  
 
   const handleNextQuestion = () => {
     setSelectedOption(null);

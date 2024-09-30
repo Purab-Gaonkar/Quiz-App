@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import QuizList from '../shared/QuizList';
+import './AdminDashboard.css'; // Import the CSS file
 
 function AdminDashboard() {
   const [quizzes, setQuizzes] = useState([]);
@@ -39,13 +40,15 @@ function AdminDashboard() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <div className="loading">Loading...</div>;
+  if (error) return <div className="error">Error: {error}</div>;
 
   return (
-    <div>
+    <div className="container">
       <h1>Admin Dashboard</h1>
-      <QuizList quizzes={quizzes} isAdmin={true} onDelete={fetchQuizzes} />
+      <div className="quiz-list">
+        <QuizList quizzes={quizzes} isAdmin={true} onDelete={deleteQuiz} />
+      </div>
     </div>
   );
 }

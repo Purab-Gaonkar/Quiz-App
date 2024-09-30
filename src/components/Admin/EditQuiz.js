@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import './EditQuiz.css';
+
 
 function EditQuiz() {
   const { id } = useParams();
@@ -120,33 +122,37 @@ function EditQuiz() {
         />
       </div>
       {quizData.questions.map((question, questionIndex) => (
-        <div key={questionIndex}>
+        <div key={questionIndex} className="question-container">
           <input
             type="text"
+            placeholder="Question text"
             value={question.question_text}
             onChange={(e) => handleQuestionChange(questionIndex, 'question_text', e.target.value)}
           />
-          {question.options.map((option, optionIndex) => (
-            <div key={optionIndex}>
-              <input
-                type="text"
-                value={option.text}
-                onChange={(e) => handleOptionChange(questionIndex, optionIndex, e.target.value)}
-              />
-              <input
-                type="radio"
-                checked={question.correctAnswer === optionIndex}
-                onChange={() => handleCorrectAnswerChange(questionIndex, optionIndex)}
-              />
-            </div>
-          ))}
+          <div className="options">
+            {question.options.map((option, optionIndex) => (
+              <div key={optionIndex}>
+                <input
+                  type="text"
+                  placeholder={`Option ${optionIndex + 1}`}
+                  value={option.text}
+                  onChange={(e) => handleOptionChange(questionIndex, optionIndex, e.target.value)}
+                />
+                <input
+                  type="radio"
+                  checked={question.correctAnswer === optionIndex}
+                  onChange={() => handleCorrectAnswerChange(questionIndex, optionIndex)}
+                />
+              </div>
+            ))}
+          </div>
           <button type="button" onClick={() => removeQuestion(questionIndex)}>Remove Question</button>
         </div>
       ))}
       <button type="button" onClick={addQuestion}>Add Question</button>
       <button type="submit">Save Changes</button>
     </form>
-  );
+  );  
 }
 
 export default EditQuiz;

@@ -1,0 +1,85 @@
+/* EditQuiz.css */
+
+form {
+    max-width: 600px; /* Limit form width for better readability */
+    margin: 20px auto; /* Center the form */
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9; /* Light background color */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  h1 {
+    text-align: center; /* Center the heading */
+    color: #333;
+  }
+  
+  div {
+    margin-bottom: 15px; /* Space between input fields */
+  }
+  
+  label {
+    display: block; /* Stack labels above inputs */
+    font-weight: bold; /* Make labels bold */
+    margin-bottom: 5px; /* Space between label and input */
+  }
+  
+  input[type="text"],
+  input[type="number"] {
+    width: 100%; /* Full width for inputs */
+    padding: 10px; /* Padding for better touch targets */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    transition: border-color 0.2s;
+  }
+  
+  input[type="text"]:focus,
+  input[type="number"]:focus {
+    border-color: #3498db; /* Blue border on focus */
+  }
+  
+  button {
+    padding: 10px 15px; /* Padding for buttons */
+    border: none;
+    border-radius: 4px;
+    background-color: #3498db; /* Blue background */
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  button:hover {
+    background-color: #2980b9; /* Darker blue on hover */
+  }
+  
+  button[type="button"] {
+    background-color: #e74c3c; /* Red for remove question */
+  }
+  
+  button[type="button"]:hover {
+    background-color: #c0392b; /* Darker red on hover */
+  }
+  
+  .question-container {
+    margin-bottom: 20px; /* Space between questions */
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    background-color: #fff; /* White background for questions */
+  }
+  
+  .options {
+    margin-top: 10px; /* Space above options */
+  }
+  
+  .options div {
+    display: flex; /* Align radio button and input */
+    align-items: center;
+    margin-bottom: 10px; /* Space between options */
+  }
+  
+  .options input[type="radio"] {
+    margin-right: 10px; /* Space between radio and label */
+  }
+  
